@@ -1,0 +1,148 @@
+import net.sf.jasperreports.engine.*;
+import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
+import net.sf.jasperreports.export.SimpleExporterInput;
+import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
+
+import java.awt.Color;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ExcelReportWithConditionalCircle {
+
+    public static void main(String[] args) {
+        try {
+            // 데이터 준비
+            List<DataItem> dataItems = new ArrayList<>();
+            dataItems.add(new DataItem("A", true));
+            dataItems.add(new DataItem("B", false));
+            dataItems.add(new DataItem("C", true));
+
+            // JasperReport 템플릿 로드
+            JasperReport jasperReport = JasperCompileManager.compileReport("YourReportTemplate.jrxml");
+
+            // 맵 생성 및 데이터 전달
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("dataItems", new JRBeanCollectionDataSource(dataItems));
+
+            // JasperReport 생성
+            JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, new JREmptyDataSource());
+
+            // JasperReports Xlsx exporter 생성
+            JRXlsxExporter exporter = new JRXlsxExporter();
+
+            // 출력 파일 경로 지정
+            String outputFilePath = "output.xlsx";
+            exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+            exporter.setExporterOutput(new SimpleOutputStreamExporterOutput(new File(outputFilePath)));
+
+            // 조건에 따라 원 추가
+            exporter.setParameter(JRXlsxExporterParameter.IS_REMOVE_EMPTY_SPACE_BETWEEN_COLUMNS, Boolean.TRUE);
+            exporter.setParameter(JRXlsxExporterParameter.IS_REMOVE_EMPTY_SPACE_BETWEEN_ROWS, Boolean.TRUE);
+
+            // Excel에 도형 추가
+            for (int i = 0; i < dataItems.size(); i++) {
+                DataItem dataItem = dataItems.get(i);
+                if (dataItem.isCircle()) {
+                    exporter.setParameter(JRXlsxExporterParameter.CUSTOM_SHAPE, new CustomShape(
+                            i, 0, 20, 20,
+                            ShapeType.CIRCLE, Color.RED
+                    ));
+                }
+            }
+
+            // Excel 파일 생성
+            exporter.exportReport();
+        } catch (JRException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+// 사용자 정의 클래스: 데이터 아이템
+class DataItem {
+    private String text;
+    private boolean circle;
+
+    public DataItem(String text, boolean circle) {
+        this.text = text;
+        this.circle = circle;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public boolean isCircle() {
+        return circle;
+    }
+}
+
+// 사용자 정의 클래스: 도형을 표현하는 클래스
+class CustomShape implements XlsxShape {
+    private final int x;
+    private final int y;
+    private final int width;
+    private final int height;
+    private final ShapeType shapeType;
+    private final Color color;
+
+    public CustomShape(int x, int y, int width, int height, ShapeType shapeType, Color color) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.shapeType = shapeType;
+        this.color = color;
+    }
+
+    @Override
+    public int getX() {
+        return x;
+    }
+
+    @Override
+    public int getY() {
+        return y;
+    }
+
+    @Override
+    public int getWidth() {
+        return width;
+    }
+
+    @Override
+    public int getHeight() {
+        return height;
+    }
+
+    @Override
+    public ShapeType getShapeType() {
+        return shapeType;
+    }
+
+    @Override
+    public Color getColor() {
+        return color;
+    }
+}
+
+// 사용자 정의 인터페이스: Excel에 추가할 도형의 속성 정의
+interface XlsxShape {
+    int getX();
+    int getY();
+    int getWidth();
+    int getHeight();
+    ShapeType getShapeType();
+    Color getColor();
+}
+
+// 사용자 정의 열거형: 도형의 유형 정의
+enum ShapeType {
+    RECTANGLE,
+    CIRCLE,
+    TRIANGLE
+}
